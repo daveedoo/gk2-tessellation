@@ -1,6 +1,12 @@
 #define INPUT_PATCH_SIZE 4
 #define OUTPUT_PATCH_SIZE 4
 
+cbuffer cbTesselationFactors : register(b0) // Hull shader constant buffer slot 0
+{
+    float outside;
+    float inside;
+};
+
 struct HSInput
 {
 	float4 pos : POSITION;
@@ -20,8 +26,8 @@ struct DSControlPoint
 HSPatchOutput HS_Patch(InputPatch<HSInput, INPUT_PATCH_SIZE> ip, uint patchId : SV_PrimitiveID)
 {
 	HSPatchOutput o;
-	o.edges[0] = o.edges[1] = o.edges[2] = o.edges[3] = 2.0f;
-	o.inside[0] = o.inside[1] = 3.0f;
+    o.edges[0] = o.edges[1] = o.edges[2] = o.edges[3] = outside;
+    o.inside[0] = o.inside[1] = inside;
 	return o;
 }
 

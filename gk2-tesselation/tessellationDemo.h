@@ -16,8 +16,13 @@ namespace mini
 
 		private:
 			void UpdateCameraCB();
+			void UpdateTesselationCB();
+			void ProcessKeyboardInput();
 
 			dx_ptr<ID3D11Buffer> m_cbView, m_cbProj, m_cbSurfaceColor;
+			dx_ptr<ID3D11Buffer> m_cbTesselationFactors;
+			float m_tessOutside;
+			float m_tessInside;
 
 			dx_ptr<ID3D11Buffer> m_vertexBuffer;
 			unsigned int m_vertexStride;

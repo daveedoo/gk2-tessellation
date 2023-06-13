@@ -8,7 +8,10 @@ using namespace DirectX;
 TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	: DxApplication(appInstance, 1280, 720, L"TessellationDemo"),
 	  m_cbView(m_device.CreateConstantBuffer<XMFLOAT4X4>()), m_cbProj(m_device.CreateConstantBuffer<XMFLOAT4X4>()),
-	  m_cbSurfaceColor(m_device.CreateConstantBuffer<XMFLOAT4>()), m_vertexStride(sizeof(XMFLOAT3)), m_vertexCount(4)
+	  m_cbSurfaceColor(m_device.CreateConstantBuffer<XMFLOAT4>()),
+	  m_cbTesselationFactors(m_device.CreateConstantBuffer<XMFLOAT4>()),	// minimal CB size is 16B
+	  m_tessOutside(8), m_tessInside(8),
+	  m_vertexStride(sizeof(XMFLOAT3)), m_vertexCount(4)
 {
 	auto s = m_window.getClientSize();
 	auto ar = static_cast<float>(s.cx) / s.cy;
@@ -16,7 +19,7 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	XMStoreFloat4x4(&tmpMtx, XMMatrixPerspectiveFovLH(XM_PIDIV4, ar, 0.01f, 100.0f));
 	UpdateBuffer(m_cbProj, tmpMtx);
 	UpdateBuffer(m_cbSurfaceColor, XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f));
-
+	UpdateTesselationCB();
 	UpdateCameraCB();
 
 	RasterizerDescription rsDesc;
@@ -52,6 +55,8 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 
 	ID3D11Buffer* tmpBuf = m_cbView.get();
 	m_device.context()->VSSetConstantBuffers(0, 1, &tmpBuf);
+	tmpBuf = m_cbTesselationFactors.get();
+	m_device.context()->HSSetConstantBuffers(0, 1, &tmpBuf);
 	tmpBuf = m_cbProj.get();
 	m_device.context()->DSSetConstantBuffers(0, 1, &tmpBuf);
 	tmpBuf = m_cbSurfaceColor.get();
@@ -71,11 +76,52 @@ void TessellationDemo::UpdateCameraCB()
 	UpdateBuffer(m_cbView, viewMtx);
 }
 
+void mini::gk2::TessellationDemo::UpdateTesselationCB()
+{
+	UpdateBuffer(m_cbTesselationFactors, XMFLOAT2(m_tessOutside, m_tessInside));
+}
+
+void TessellationDemo::ProcessKeyboardInput()
+{
+	static const float TESS_MIN = 1.f;
+	static const float TESS_MAX = 32.f;
+
+	static KeyboardState prev;
+	KeyboardState kbState;
+	m_keyboard.GetState(kbState);
+
+	if (prev.keyPressed(kbState, DIK_DOWN))
+	{
+		m_tessOutside = clamp(--m_tessOutside, TESS_MIN, TESS_MAX);
+		UpdateTesselationCB();
+	}
+	if (prev.keyPressed(kbState, DIK_UP))
+	{
+		m_tessOutside = clamp(++m_tessOutside, TESS_MIN, TESS_MAX);
+		UpdateTesselationCB();
+	}
+	
+	if (prev.keyPressed(kbState, DIK_LEFT))
+	{
+		m_tessInside = clamp(--m_tessInside, TESS_MIN, TESS_MAX);
+		UpdateTesselationCB();
+	}
+	if (prev.keyPressed(kbState, DIK_RIGHT))
+	{
+		m_tessInside = clamp(++m_tessInside, TESS_MIN, TESS_MAX);
+		UpdateTesselationCB();
+	}
+
+	prev = kbState;
+}
+
 void TessellationDemo::Update(const Clock& c)
 {
 	double dt = c.getFrameTime();
 	if (HandleCameraInput(dt))
 		UpdateCameraCB();
+
+	ProcessKeyboardInput();
 }
 
 void TessellationDemo::Render()
