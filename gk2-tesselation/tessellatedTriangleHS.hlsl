@@ -1,5 +1,5 @@
-#define INPUT_PATCH_SIZE 3
-#define OUTPUT_PATCH_SIZE 3
+#define INPUT_PATCH_SIZE 4
+#define OUTPUT_PATCH_SIZE 4
 
 struct HSInput
 {
@@ -8,8 +8,8 @@ struct HSInput
 
 struct HSPatchOutput
 {
-	float edges[3] : SV_TessFactor;
-	float inside : SV_InsideTessFactor;
+	float edges[4] : SV_TessFactor;
+	float inside[2] : SV_InsideTessFactor;
 };
 
 struct DSControlPoint
@@ -20,12 +20,12 @@ struct DSControlPoint
 HSPatchOutput HS_Patch(InputPatch<HSInput, INPUT_PATCH_SIZE> ip, uint patchId : SV_PrimitiveID)
 {
 	HSPatchOutput o;
-	o.edges[0] = o.edges[1] = o.edges[2] = 8.0f;
-	o.inside = 8.0f;
+	o.edges[0] = o.edges[1] = o.edges[2] = o.edges[3] = 2.0f;
+	o.inside[0] = o.inside[1] = 3.0f;
 	return o;
 }
 
-[domain("tri")]
+[domain("quad")]
 [partitioning("integer")]
 [outputtopology("triangle_cw")]
 [outputcontrolpoints(OUTPUT_PATCH_SIZE)]

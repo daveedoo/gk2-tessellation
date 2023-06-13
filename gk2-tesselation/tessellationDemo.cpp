@@ -8,7 +8,7 @@ using namespace DirectX;
 TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	: DxApplication(appInstance, 1280, 720, L"TessellationDemo"),
 	  m_cbView(m_device.CreateConstantBuffer<XMFLOAT4X4>()), m_cbProj(m_device.CreateConstantBuffer<XMFLOAT4X4>()),
-	  m_cbSurfaceColor(m_device.CreateConstantBuffer<XMFLOAT4>()), m_vertexStride(sizeof(XMFLOAT3)), m_vertexCount(3)
+	  m_cbSurfaceColor(m_device.CreateConstantBuffer<XMFLOAT4>()), m_vertexStride(sizeof(XMFLOAT3)), m_vertexCount(4)
 {
 	auto s = m_window.getClientSize();
 	auto ar = static_cast<float>(s.cx) / s.cy;
@@ -40,9 +40,12 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	};
 	m_layout = m_device.CreateInputLayout(layout, vsCode);
 
-	vector<XMFLOAT3> vtx{ { XMFLOAT3(-2.0f, -1.5f, 0.0f) },
-	{ XMFLOAT3(2.0f, -1.5f, 0.0f) },
-	{ XMFLOAT3(0.0f, 1.5f, 0.0f) } };
+	vector<XMFLOAT3> vtx{
+		{ XMFLOAT3(-1.5f, -1.5f, 0.0f) },
+		{ XMFLOAT3(1.5f, -1.5f, 0.0f) },
+		{ XMFLOAT3(1.5f, 1.5f, 0.0f) },
+		{ XMFLOAT3(-1.5f, 1.5f, 0.0f) },
+	};
 
 	m_vertexBuffer = m_device.CreateVertexBuffer(vtx);
 	m_device.context()->IASetInputLayout(m_layout.get());
@@ -58,7 +61,7 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	unsigned int offset = 0;
 	ID3D11Buffer* b = m_vertexBuffer.get();
 	m_device.context()->IASetVertexBuffers(0, 1, &b, &m_vertexStride, &offset);
-	m_device.context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
+	m_device.context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 }
 
 void TessellationDemo::UpdateCameraCB()
