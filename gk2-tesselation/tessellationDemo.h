@@ -1,5 +1,7 @@
 #pragma once
 #include "dxApplication.h"
+#include <vector>
+#include <DirectXMath.h>
 
 namespace mini
 {
@@ -10,21 +12,31 @@ namespace mini
 		public:
 			explicit TessellationDemo(HINSTANCE appInstance);
 
+
 		protected:
 			void Update(const Clock& dt) override;
 			void Render() override;
 
 		private:
+			void InitVertexData();
 			void UpdateCameraCB();
 			void UpdateTesselationCB();
 			void ProcessKeyboardInput();
+
+			void UpdateVertexBuffer();
 
 			dx_ptr<ID3D11Buffer> m_cbView, m_cbProj, m_cbSurfaceColor;
 			dx_ptr<ID3D11Buffer> m_cbTesselationFactors;
 			float m_tessOutside;
 			float m_tessInside;
 
+			std::vector<DirectX::XMFLOAT3> m_patch1;
+			std::vector<DirectX::XMFLOAT3> m_patch16;
+
 			dx_ptr<ID3D11Buffer> m_vertexBuffer;
+			dx_ptr<ID3D11Buffer> m_vertexBuffer16;
+			dx_ptr<ID3D11Buffer> m_indexBuffer;
+			dx_ptr<ID3D11Buffer> m_indexBuffer16;
 			unsigned int m_vertexStride;
 			unsigned int m_vertexCount;
 

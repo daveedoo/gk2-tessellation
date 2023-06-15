@@ -1,4 +1,5 @@
 #include "tessellationDemo.h"
+#include <DirectXMath.h>
 
 using namespace std;
 using namespace mini;
@@ -10,9 +11,11 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	  m_cbView(m_device.CreateConstantBuffer<XMFLOAT4X4>()), m_cbProj(m_device.CreateConstantBuffer<XMFLOAT4X4>()),
 	  m_cbSurfaceColor(m_device.CreateConstantBuffer<XMFLOAT4>()),
 	  m_cbTesselationFactors(m_device.CreateConstantBuffer<XMFLOAT4>()),	// minimal CB size is 16B
-	  m_tessOutside(8), m_tessInside(8),
-	  m_vertexStride(sizeof(XMFLOAT3)), m_vertexCount(4)
+	  m_tessOutside(2), m_tessInside(2),
+	  m_vertexStride(sizeof(XMFLOAT3))
 {
+	InitVertexData();
+
 	auto s = m_window.getClientSize();
 	auto ar = static_cast<float>(s.cx) / s.cy;
 	XMFLOAT4X4 tmpMtx;
@@ -22,11 +25,14 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	UpdateTesselationCB();
 	UpdateCameraCB();
 
+	// RASTERIZER
 	RasterizerDescription rsDesc;
 	rsDesc.CullMode = D3D11_CULL_NONE;
 	rsDesc.FillMode = D3D11_FILL_WIREFRAME;
 	m_rsWireframe = m_device.CreateRasterizerState(rsDesc);
+	m_device.context()->RSSetState(m_rsWireframe.get());
 
+	// SHADERS
 	auto vsCode = m_device.LoadByteCode(L"tessellatedTriangleVS.cso");
 	m_tessVS = m_device.CreateVertexShader(vsCode);
 	m_tessHS = m_device.CreateHullShader(m_device.LoadByteCode(L"tessellatedTriangleHS.cso"));
@@ -38,21 +44,18 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	m_device.context()->DSSetShader(m_tessDS.get(), nullptr, 0);
 	m_device.context()->PSSetShader(m_tessPS.get(), nullptr, 0);
 
+	// LAYOUT
 	const D3D11_INPUT_ELEMENT_DESC layout[1] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 	m_layout = m_device.CreateInputLayout(layout, vsCode);
-
-	vector<XMFLOAT3> vtx{
-		{ XMFLOAT3(-1.5f, -1.5f, 0.0f) },
-		{ XMFLOAT3(1.5f, -1.5f, 0.0f) },
-		{ XMFLOAT3(1.5f, 1.5f, 0.0f) },
-		{ XMFLOAT3(-1.5f, 1.5f, 0.0f) },
-	};
-
-	m_vertexBuffer = m_device.CreateVertexBuffer(vtx);
 	m_device.context()->IASetInputLayout(m_layout.get());
 
+	// VERTEX + INDEX BUFFERS
+	UpdateVertexBuffer();
+	m_device.context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
+
+	// CONSTANT BUFFERS
 	ID3D11Buffer* tmpBuf = m_cbView.get();
 	m_device.context()->VSSetConstantBuffers(0, 1, &tmpBuf);
 	tmpBuf = m_cbTesselationFactors.get();
@@ -61,12 +64,52 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	m_device.context()->DSSetConstantBuffers(0, 1, &tmpBuf);
 	tmpBuf = m_cbSurfaceColor.get();
 	m_device.context()->PSSetConstantBuffers(0, 1, &tmpBuf);
+}
 
-	m_device.context()->RSSetState(m_rsWireframe.get());
-	unsigned int offset = 0;
-	ID3D11Buffer* b = m_vertexBuffer.get();
-	m_device.context()->IASetVertexBuffers(0, 1, &b, &m_vertexStride, &offset);
-	m_device.context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
+void TessellationDemo::InitVertexData()
+{
+	// 1x1
+	m_patch1 = vector<XMFLOAT3>{
+		{ XMFLOAT3(-1.5f, -1.5f, 0.0f) },
+		{ XMFLOAT3(1.5f, -1.5f, 0.0f) },
+		{ XMFLOAT3(1.5f, 1.5f, 0.0f) },
+		{ XMFLOAT3(-1.5f, 1.5f, 0.0f) },
+	};
+	vector<uint16_t> m_patch1Idx = {
+		0, 1, 2, 3
+	};
+	m_vertexBuffer = m_device.CreateVertexBuffer<XMFLOAT3>(4);
+	m_indexBuffer = m_device.CreateIndexBuffer(m_patch1Idx);
+	UpdateBuffer<XMFLOAT3>(m_vertexBuffer, m_patch1);
+
+	// 4x4
+	//std::vector<DirectX::XMFLOAT3> m_patch16;
+	float gap = 1.f;
+	float x = -1.5 * gap;
+	for (size_t i = 0; i < 4; i++)
+	{
+		float y = -1.5 * gap;
+		for (size_t j = 0; j < 4; j++)
+		{
+			m_patch16.push_back(XMFLOAT3(x, y, 0.f));
+			y += gap;
+		}
+		x += gap;
+	}
+	vector<uint16_t> m_patch16Idx = {
+		0, 4, 5, 1,
+		1, 5, 6, 2,
+		2, 6, 7, 3,
+		4, 8, 9, 5,
+		5, 9, 10, 6,
+		6, 10, 11, 7,
+		8, 12, 13, 9,
+		9, 13, 14, 10,
+		10, 14, 15, 11
+	};
+	m_vertexBuffer16 = m_device.CreateVertexBuffer<XMFLOAT3>(16);
+	m_indexBuffer16 = m_device.CreateIndexBuffer(m_patch16Idx);
+	UpdateBuffer<XMFLOAT3>(m_vertexBuffer16, m_patch16);
 }
 
 void TessellationDemo::UpdateCameraCB()
@@ -115,6 +158,23 @@ void TessellationDemo::ProcessKeyboardInput()
 	prev = kbState;
 }
 
+void TessellationDemo::UpdateVertexBuffer()
+{
+	unsigned int offset = 0;
+
+	//ID3D11Buffer* b = m_vertexBuffer.get();
+	//m_device.context()->IASetVertexBuffers(0, 1, &b, &m_vertexStride, &offset);
+	//b = m_indexBuffer.get();
+	//m_device.context()->IASetIndexBuffer(b, DXGI_FORMAT_R16_UINT, 0);
+	//m_vertexCount = 4;
+
+	ID3D11Buffer* b = m_vertexBuffer16.get();
+	m_device.context()->IASetVertexBuffers(0, 1, &b, &m_vertexStride, &offset);
+	b = m_indexBuffer16.get();
+	m_device.context()->IASetIndexBuffer(b, DXGI_FORMAT_R16_UINT, 0);
+	m_vertexCount = 36;
+}
+
 void TessellationDemo::Update(const Clock& c)
 {
 	double dt = c.getFrameTime();
@@ -128,5 +188,5 @@ void TessellationDemo::Render()
 {
 	DxApplication::Render();
 
-	m_device.context()->Draw(m_vertexCount, 0);
+	m_device.context()->DrawIndexed(m_vertexCount, 0, 0);
 }
