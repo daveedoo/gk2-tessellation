@@ -31,7 +31,8 @@ namespace mini
 			float m_tessInside;
 
 			std::vector<DirectX::XMFLOAT3> m_patch1;
-			std::vector<DirectX::XMFLOAT3> m_patch16;
+			std::vector<DirectX::XMFLOAT3> m_patch16A;
+			std::vector<DirectX::XMFLOAT3> m_patch16B;
 
 			dx_ptr<ID3D11Buffer> m_vertexBuffer;
 			dx_ptr<ID3D11Buffer> m_vertexBuffer16;

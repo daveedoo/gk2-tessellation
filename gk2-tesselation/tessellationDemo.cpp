@@ -53,7 +53,6 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 
 	// VERTEX + INDEX BUFFERS
 	UpdateVertexBuffer();
-	m_device.context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 
 	// CONSTANT BUFFERS
 	ID3D11Buffer* tmpBuf = m_cbView.get();
@@ -89,27 +88,41 @@ void TessellationDemo::InitVertexData()
 	for (size_t i = 0; i < 4; i++)
 	{
 		float y = -1.5 * gap;
-		for (size_t j = 0; j < 4; j++)
-		{
-			m_patch16.push_back(XMFLOAT3(x, y, 0.f));
-			y += gap;
-		}
+		m_patch16B.push_back(XMFLOAT3(x, y, 0.f));
+		m_patch16A.push_back(XMFLOAT3(x, y, 0.f)); y += gap;
+		m_patch16B.push_back(XMFLOAT3(x, y, -1.f));
+		m_patch16A.push_back(XMFLOAT3(x, y, 1.f)); y += gap;
+		m_patch16B.push_back(XMFLOAT3(x, y, 1.f));
+		m_patch16A.push_back(XMFLOAT3(x, y, 1.f)); y += gap;
+		m_patch16B.push_back(XMFLOAT3(x, y, 0.f));
+		m_patch16A.push_back(XMFLOAT3(x, y, 0.f)); y += gap;
+		//for (size_t j = 0; j < 4; j++)
+		//{
+		//	m_patch16.push_back(XMFLOAT3(x, y, 0.f));
+		//	y += gap;
+		//}
 		x += gap;
 	}
 	vector<uint16_t> m_patch16Idx = {
-		0, 4, 5, 1,
-		1, 5, 6, 2,
-		2, 6, 7, 3,
-		4, 8, 9, 5,
-		5, 9, 10, 6,
-		6, 10, 11, 7,
-		8, 12, 13, 9,
-		9, 13, 14, 10,
-		10, 14, 15, 11
+		0, 1, 2, 3,
+		4, 5, 6, 7,
+		8, 9, 10, 11,
+		12, 13, 14, 15
 	};
+	//vector<uint16_t> m_patch16Idx = {
+	//	0, 4, 5, 1,
+	//	1, 5, 6, 2,
+	//	2, 6, 7, 3,
+	//	4, 8, 9, 5,
+	//	5, 9, 10, 6,
+	//	6, 10, 11, 7,
+	//	8, 12, 13, 9,
+	//	9, 13, 14, 10,
+	//	10, 14, 15, 11
+	//};
 	m_vertexBuffer16 = m_device.CreateVertexBuffer<XMFLOAT3>(16);
 	m_indexBuffer16 = m_device.CreateIndexBuffer(m_patch16Idx);
-	UpdateBuffer<XMFLOAT3>(m_vertexBuffer16, m_patch16);
+	UpdateBuffer<XMFLOAT3>(m_vertexBuffer16, m_patch16A);
 }
 
 void TessellationDemo::UpdateCameraCB()
@@ -155,6 +168,17 @@ void TessellationDemo::ProcessKeyboardInput()
 		UpdateTesselationCB();
 	}
 
+	if (prev.keyPressed(kbState, DIK_F))
+	{
+		static bool b = true;
+		if (b)
+			UpdateBuffer(m_vertexBuffer16, m_patch16A);
+		else
+			UpdateBuffer(m_vertexBuffer16, m_patch16B);
+
+		b = !b;
+	}
+
 	prev = kbState;
 }
 
@@ -166,13 +190,15 @@ void TessellationDemo::UpdateVertexBuffer()
 	//m_device.context()->IASetVertexBuffers(0, 1, &b, &m_vertexStride, &offset);
 	//b = m_indexBuffer.get();
 	//m_device.context()->IASetIndexBuffer(b, DXGI_FORMAT_R16_UINT, 0);
+	//m_device.context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 	//m_vertexCount = 4;
 
 	ID3D11Buffer* b = m_vertexBuffer16.get();
 	m_device.context()->IASetVertexBuffers(0, 1, &b, &m_vertexStride, &offset);
 	b = m_indexBuffer16.get();
 	m_device.context()->IASetIndexBuffer(b, DXGI_FORMAT_R16_UINT, 0);
-	m_vertexCount = 36;
+	m_device.context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
+	m_vertexCount = 16;
 }
 
 void TessellationDemo::Update(const Clock& c)
