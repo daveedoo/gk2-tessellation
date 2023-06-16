@@ -38,6 +38,7 @@ namespace mini
 			dx_ptr<ID3D11Buffer> m_vertexBuffer16;
 			dx_ptr<ID3D11Buffer> m_indexBuffer;
 			dx_ptr<ID3D11Buffer> m_indexBuffer16;
+			dx_ptr<ID3D11Buffer> m_indexBufferControlPoints;
 			unsigned int m_vertexStride;
 			unsigned int m_vertexCount;
 
@@ -45,6 +46,7 @@ namespace mini
 			dx_ptr<ID3D11RasterizerState> m_rsWireframe;
 
 			dx_ptr<ID3D11VertexShader> m_tessVS;
+			dx_ptr<ID3D11VertexShader> m_tessVSNonTess;
 			dx_ptr<ID3D11HullShader> m_tessHS;
 			dx_ptr<ID3D11DomainShader> m_tessDS;
 			dx_ptr<ID3D11PixelShader> m_tessPS;
