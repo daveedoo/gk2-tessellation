@@ -40,17 +40,6 @@ DSControlPoint main(InputPatch<HSInput, INPUT_PATCH_SIZE> ip, uint i : SV_Output
 	uint patchID : SV_PrimitiveID)
 {
 	DSControlPoint o;
-
-	//if (i == 1)
- //       o.pos = ip[12].pos;
-	//else if (i == 2)
- //       o.pos = ip[15].pos;
-	//else if (i == 12)
- //       o.pos = ip[1].pos;
-	//else if (i == 15)
- //       o.pos = ip[2].pos;
-	//else
     o.pos = ip[i].pos;
-	
 	return o;
 }

@@ -8,10 +8,11 @@ using namespace DirectX;
 
 TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	: DxApplication(appInstance, 1280, 720, L"TessellationDemo"),
-	  m_cbView(m_device.CreateConstantBuffer<XMFLOAT4X4>()), m_cbProj(m_device.CreateConstantBuffer<XMFLOAT4X4>()),
+	  m_cbView(m_device.CreateConstantBuffer<XMFLOAT4X4, 2>()), m_cbProj(m_device.CreateConstantBuffer<XMFLOAT4X4>()),
 	  m_cbSurfaceColor(m_device.CreateConstantBuffer<XMFLOAT4>()),
+	  m_cbViewProj(m_device.CreateConstantBuffer<XMFLOAT4X4>()),
 	  m_cbTesselationFactors(m_device.CreateConstantBuffer<XMFLOAT4>()),	// minimal CB size is 16B
-	  m_tessOutside(2), m_tessInside(2),
+	  m_tessOutside(32), m_tessInside(32),
 	  m_vertexStride(sizeof(XMFLOAT3))
 {
 	InitVertexData();
@@ -28,7 +29,8 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	// RASTERIZER
 	RasterizerDescription rsDesc;
 	rsDesc.CullMode = D3D11_CULL_NONE;
-	rsDesc.FillMode = D3D11_FILL_WIREFRAME;
+	//rsDesc.FillMode = D3D11_FILL_WIREFRAME;
+	rsDesc.FillMode = D3D11_FILL_SOLID;
 	m_rsWireframe = m_device.CreateRasterizerState(rsDesc);
 	m_device.context()->RSSetState(m_rsWireframe.get());
 
@@ -36,13 +38,12 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	auto vsCode = m_device.LoadByteCode(L"tessellatedTriangleVS.cso");
 	auto vsCodeNonTess = m_device.LoadByteCode(L"simpleVS.cso");
 	m_tessVS = m_device.CreateVertexShader(vsCode);
-	m_tessVSNonTess = m_device.CreateVertexShader(vsCodeNonTess);
+	m_nonTessVS = m_device.CreateVertexShader(vsCodeNonTess);
 	m_tessHS = m_device.CreateHullShader(m_device.LoadByteCode(L"tessellatedTriangleHS.cso"));
 	m_tessDS = m_device.CreateDomainShader(m_device.LoadByteCode(L"tessellatedTriangleDS.cso"));
 	m_tessPS = m_device.CreatePixelShader(m_device.LoadByteCode(L"tessellatedTrianglePS.cso"));
+	m_nonTessPS = m_device.CreatePixelShader(m_device.LoadByteCode(L"simplePS.cso"));
 
-
-	m_device.context()->PSSetShader(m_tessPS.get(), nullptr, 0);
 
 	// LAYOUT
 	const D3D11_INPUT_ELEMENT_DESC layout[1] = {
@@ -57,6 +58,7 @@ TessellationDemo::TessellationDemo(HINSTANCE appInstance)
 	// CONSTANT BUFFERS
 	ID3D11Buffer* tmpBuf = m_cbView.get();
 	m_device.context()->VSSetConstantBuffers(0, 1, &tmpBuf);
+	m_device.context()->DSSetConstantBuffers(1, 1, &tmpBuf);
 	tmpBuf = m_cbTesselationFactors.get();
 	m_device.context()->HSSetConstantBuffers(0, 1, &tmpBuf);
 	tmpBuf = m_cbProj.get();
@@ -142,9 +144,24 @@ void TessellationDemo::InitVertexData()
 
 void TessellationDemo::UpdateCameraCB()
 {
-	XMFLOAT4X4 viewMtx;
-	XMStoreFloat4x4(&viewMtx, m_camera.getViewMatrix());
-	UpdateBuffer(m_cbView, viewMtx);
+	XMMATRIX view = m_camera.getViewMatrix();
+	XMMATRIX invView = XMMatrixInverse(nullptr, view);
+	XMFLOAT4X4 viewBuff[2];
+	XMStoreFloat4x4(viewBuff, view);
+	XMStoreFloat4x4(viewBuff + 1, invView);
+	UpdateBuffer(m_cbView, viewBuff);
+
+	auto s = m_window.getClientSize();
+	auto ar = static_cast<float>(s.cx) / s.cy;
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, ar, 0.01f, 100.0f);
+	XMFLOAT4X4 projMtx;
+	XMStoreFloat4x4(&projMtx, proj);
+	
+	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+	XMFLOAT4X4 viewProjMtx;
+	XMStoreFloat4x4(&viewProjMtx, viewProj);
+
+	UpdateBuffer(m_cbViewProj, viewProjMtx);
 }
 
 void mini::gk2::TessellationDemo::UpdateTesselationCB()
@@ -233,9 +250,10 @@ void TessellationDemo::Render()
 
 
 	// control points draw
-	m_device.context()->VSSetShader(m_tessVSNonTess.get(), nullptr, 0);
+	m_device.context()->VSSetShader(m_nonTessVS.get(), nullptr, 0);
 	m_device.context()->HSSetShader(nullptr, nullptr, 0);
 	m_device.context()->DSSetShader(nullptr, nullptr, 0);
+	m_device.context()->PSSetShader(m_nonTessPS.get(), nullptr, 0);
 
 	b = m_indexBufferControlPoints.get();
 	m_device.context()->IASetIndexBuffer(b, DXGI_FORMAT_R16_UINT, 0);
@@ -249,6 +267,7 @@ void TessellationDemo::Render()
 	m_device.context()->VSSetShader(m_tessVS.get(), nullptr, 0);
 	m_device.context()->HSSetShader(m_tessHS.get(), nullptr, 0);
 	m_device.context()->DSSetShader(m_tessDS.get(), nullptr, 0);
+	m_device.context()->PSSetShader(m_tessPS.get(), nullptr, 0);
 
 	b = m_indexBuffer16.get();
 	m_device.context()->IASetIndexBuffer(b, DXGI_FORMAT_R16_UINT, 0);

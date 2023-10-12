@@ -1,6 +1,7 @@
 cbuffer cbView : register(b0) //Vertex Shader constant buffer slot 0
 {
     matrix viewMatrix;
+    matrix invViewMatrix;
 };
 
 cbuffer cbProj : register(b1) //Vertex Shader constant buffer slot 1

@@ -26,6 +26,7 @@ namespace mini
 			void UpdateVertexBuffer();
 
 			dx_ptr<ID3D11Buffer> m_cbView, m_cbProj, m_cbSurfaceColor;
+			dx_ptr<ID3D11Buffer> m_cbViewProj;
 			dx_ptr<ID3D11Buffer> m_cbTesselationFactors;
 			float m_tessOutside;
 			float m_tessInside;
@@ -46,10 +47,11 @@ namespace mini
 			dx_ptr<ID3D11RasterizerState> m_rsWireframe;
 
 			dx_ptr<ID3D11VertexShader> m_tessVS;
-			dx_ptr<ID3D11VertexShader> m_tessVSNonTess;
+			dx_ptr<ID3D11VertexShader> m_nonTessVS;
 			dx_ptr<ID3D11HullShader> m_tessHS;
 			dx_ptr<ID3D11DomainShader> m_tessDS;
 			dx_ptr<ID3D11PixelShader> m_tessPS;
+			dx_ptr<ID3D11PixelShader> m_nonTessPS;
 		};
 	}
 }
